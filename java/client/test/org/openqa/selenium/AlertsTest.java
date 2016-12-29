@@ -111,7 +111,6 @@ public class AlertsTest extends JUnit4TestBase {
 
   @JavascriptEnabled
   @Test
-  @Ignore(value = CHROME, reason = "ChromeDriver issue 764")
   public void testShouldAllowUsersToDismissAnAlertManually() {
     wait.until(presenceOfElementLocated(By.id("alert"))).click();
 
@@ -165,8 +164,8 @@ public class AlertsTest extends JUnit4TestBase {
     wait.until(textInElementLocated(By.id("text"), "cheese"));
   }
 
-  @Ignore(value = {CHROME},
-    reason = "Marionette: https://github.com/jgraham/wires/issues/17")
+  @Ignore(value = {MARIONETTE, CHROME},
+    reason = "Marionette: https://github.com/mozilla/geckodriver/issues/274")
   @JavascriptEnabled
   @Test
   public void testSettingTheValueOfAnAlertThrows() {
@@ -226,6 +225,7 @@ public class AlertsTest extends JUnit4TestBase {
   @JavascriptEnabled
   @SwitchToTopAfterTest
   @Test
+  @Ignore(value = MARIONETTE)
   public void testShouldAllowUsersToAcceptAnAlertInAFrame() {
     driver.switchTo().frame("iframeWithAlert");
 
@@ -241,6 +241,8 @@ public class AlertsTest extends JUnit4TestBase {
   @JavascriptEnabled
   @SwitchToTopAfterTest
   @Test
+  @Ignore(value = MARIONETTE,
+    reason = "Marionette: https://bugzilla.mozilla.org/show_bug.cgi?id=1279211")
   public void testShouldAllowUsersToAcceptAnAlertInANestedFrame() {
     driver.switchTo().frame("iframeWithIframe").switchTo().frame("iframeWithAlert");
 

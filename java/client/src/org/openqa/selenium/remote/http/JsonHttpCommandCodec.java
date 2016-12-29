@@ -18,22 +18,35 @@
 package org.openqa.selenium.remote.http;
 
 import static org.openqa.selenium.remote.DriverCommand.ACCEPT_ALERT;
+import static org.openqa.selenium.remote.DriverCommand.CLEAR_LOCAL_STORAGE;
+import static org.openqa.selenium.remote.DriverCommand.CLEAR_SESSION_STORAGE;
 import static org.openqa.selenium.remote.DriverCommand.DISMISS_ALERT;
 import static org.openqa.selenium.remote.DriverCommand.EXECUTE_ASYNC_SCRIPT;
 import static org.openqa.selenium.remote.DriverCommand.EXECUTE_SCRIPT;
+import static org.openqa.selenium.remote.DriverCommand.GET_ACTIVE_ELEMENT;
 import static org.openqa.selenium.remote.DriverCommand.GET_ALERT_TEXT;
 import static org.openqa.selenium.remote.DriverCommand.GET_CURRENT_WINDOW_HANDLE;
 import static org.openqa.selenium.remote.DriverCommand.GET_CURRENT_WINDOW_POSITION;
 import static org.openqa.selenium.remote.DriverCommand.GET_CURRENT_WINDOW_SIZE;
 import static org.openqa.selenium.remote.DriverCommand.GET_ELEMENT_ATTRIBUTE;
 import static org.openqa.selenium.remote.DriverCommand.GET_ELEMENT_LOCATION_ONCE_SCROLLED_INTO_VIEW;
+import static org.openqa.selenium.remote.DriverCommand.GET_LOCAL_STORAGE_ITEM;
+import static org.openqa.selenium.remote.DriverCommand.GET_LOCAL_STORAGE_KEYS;
+import static org.openqa.selenium.remote.DriverCommand.GET_LOCAL_STORAGE_SIZE;
 import static org.openqa.selenium.remote.DriverCommand.GET_PAGE_SOURCE;
+import static org.openqa.selenium.remote.DriverCommand.GET_SESSION_STORAGE_ITEM;
+import static org.openqa.selenium.remote.DriverCommand.GET_SESSION_STORAGE_KEYS;
+import static org.openqa.selenium.remote.DriverCommand.GET_SESSION_STORAGE_SIZE;
 import static org.openqa.selenium.remote.DriverCommand.GET_WINDOW_HANDLES;
 import static org.openqa.selenium.remote.DriverCommand.IS_ELEMENT_DISPLAYED;
 import static org.openqa.selenium.remote.DriverCommand.MAXIMIZE_CURRENT_WINDOW;
+import static org.openqa.selenium.remote.DriverCommand.REMOVE_LOCAL_STORAGE_ITEM;
+import static org.openqa.selenium.remote.DriverCommand.REMOVE_SESSION_STORAGE_ITEM;
 import static org.openqa.selenium.remote.DriverCommand.SET_ALERT_VALUE;
 import static org.openqa.selenium.remote.DriverCommand.SET_CURRENT_WINDOW_POSITION;
 import static org.openqa.selenium.remote.DriverCommand.SET_CURRENT_WINDOW_SIZE;
+import static org.openqa.selenium.remote.DriverCommand.SET_LOCAL_STORAGE_ITEM;
+import static org.openqa.selenium.remote.DriverCommand.SET_SESSION_STORAGE_ITEM;
 import static org.openqa.selenium.remote.DriverCommand.SUBMIT_ELEMENT;
 
 import com.google.common.collect.ImmutableMap;
@@ -73,6 +86,22 @@ public class JsonHttpCommandCodec extends AbstractHttpCommandCodec {
     defineCommand(DISMISS_ALERT, post("/session/:sessionId/dismiss_alert"));
     defineCommand(GET_ALERT_TEXT, get("/session/:sessionId/alert_text"));
     defineCommand(SET_ALERT_VALUE, post("/session/:sessionId/alert_text"));
+
+    defineCommand(GET_ACTIVE_ELEMENT, post("/session/:sessionId/element/active"));
+
+    defineCommand(CLEAR_LOCAL_STORAGE, delete("/session/:sessionId/local_storage"));
+    defineCommand(GET_LOCAL_STORAGE_KEYS, get("/session/:sessionId/local_storage"));
+    defineCommand(SET_LOCAL_STORAGE_ITEM, post("/session/:sessionId/local_storage"));
+    defineCommand(REMOVE_LOCAL_STORAGE_ITEM, delete("/session/:sessionId/local_storage/key/:key"));
+    defineCommand(GET_LOCAL_STORAGE_ITEM, get("/session/:sessionId/local_storage/key/:key"));
+    defineCommand(GET_LOCAL_STORAGE_SIZE, get("/session/:sessionId/local_storage/size"));
+
+    defineCommand(CLEAR_SESSION_STORAGE, delete("/session/:sessionId/session_storage"));
+    defineCommand(GET_SESSION_STORAGE_KEYS, get("/session/:sessionId/session_storage"));
+    defineCommand(SET_SESSION_STORAGE_ITEM, post("/session/:sessionId/session_storage"));
+    defineCommand(REMOVE_SESSION_STORAGE_ITEM, delete("/session/:sessionId/session_storage/key/:key"));
+    defineCommand(GET_SESSION_STORAGE_ITEM, get("/session/:sessionId/session_storage/key/:key"));
+    defineCommand(GET_SESSION_STORAGE_SIZE, get("/session/:sessionId/session_storage/size"));
   }
 
   @Override

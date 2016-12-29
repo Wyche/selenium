@@ -127,23 +127,6 @@ module Selenium
           @root ||= Pathname.new('../../../../../../../').expand_path(__FILE__)
         end
 
-        private
-
-        def create_driver
-          method = "create_#{driver}_driver".to_sym
-          instance = if private_methods.include?(method)
-                       send method
-                     else
-                       WebDriver::Driver.for(driver)
-                     end
-          @create_driver_error_count -= 1 unless @create_driver_error_count == 0
-          instance
-        rescue => ex
-          @create_driver_error = ex
-          @create_driver_error_count += 1
-          raise ex
-        end
-
         def remote_capabilities
           opt = {}
           browser_name = if browser == :ff_legacy
@@ -166,6 +149,23 @@ module Selenium
           end
 
           caps
+        end
+
+        private
+
+        def create_driver
+          method = "create_#{driver}_driver".to_sym
+          instance = if private_methods.include?(method)
+                       send method
+                     else
+                       WebDriver::Driver.for(driver)
+                     end
+          @create_driver_error_count -= 1 unless @create_driver_error_count == 0
+          instance
+        rescue => ex
+          @create_driver_error = ex
+          @create_driver_error_count += 1
+          raise ex
         end
 
         MAX_ERRORS = 4
@@ -217,7 +217,6 @@ module Selenium
           args = ENV['TRAVIS'] ? ['--no-sandbox'] : []
 
           WebDriver::Driver.for :chrome,
-                                native_events: native_events?,
                                 args: args
         end
 
@@ -228,8 +227,8 @@ module Selenium
         end
 
         def create_safari_driver
-          return WebDriver::Driver.for :safari unless ENV['timeout']
-          WebDriver::Driver.for :safari, timeout: Integer(ENV['timeout'])
+          WebDriver::Safari.driver_path = ENV['SAFARIDRIVER'] if ENV['SAFARIDRIVER']
+          WebDriver::Driver.for :safari
         end
 
         def keep_alive_client

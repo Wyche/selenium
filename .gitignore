@@ -16,6 +16,7 @@ common/build
 cpp/iedriver/IEReturnTypes.h
 java/client/src/org/openqa/selenium/ie/IeReturnTypes.java
 javascript/deps.js
+javascript/node/selenium-webdriver/lib/atoms/
 javascript/node/selenium-webdriver/node_modules/
 javascript/safari-driver/node_modules/
 .idea/vcs.xml
@@ -45,6 +46,8 @@ java/client/build/
 java/client/log.txt
 java/client/iedriver.log
 java/server/build/
+__pycache__
+.tox
 *.pyc
 dist/
 py/selenium/webdriver/firefox/amd64/
@@ -71,6 +74,7 @@ ipch/
 /iedriver.log
 /phantomjsdriver.log
 geckodriver.log
+ghostdriver.log
 .tags
 .ruby-version
 GPATH

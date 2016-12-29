@@ -23,15 +23,16 @@ module Selenium
       # @api private
       class W3CBridge < Remote::W3CBridge
         def initialize(opts = {})
-          caps = opts[:desired_capabilities] ||= Remote::W3CCapabilities.firefox
-          Binary.path = caps[:firefox_binary] if caps[:firefox_binary]
+          port = opts.delete(:port) || Service::DEFAULT_PORT
+          opts[:desired_capabilities] = create_capabilities(opts)
+          service_args = opts.delete(:service_args) || {}
 
-          @service = Service.new(Firefox.driver_path, Service::DEFAULT_PORT, *extract_service_args(opts))
+          driver_path = opts.delete(:driver_path) || Firefox.driver_path(false)
+          @service = Service.new(driver_path, port, *extract_service_args(service_args))
           @service.start
-
           opts[:url] = @service.uri
 
-          super
+          super(opts)
         end
 
         def browser
@@ -54,10 +55,32 @@ module Selenium
 
         private
 
-        def extract_service_args(opts)
-          service_log_path = opts.delete(:service_log_path)
-          service_log_path ? ["--log-path=#{service_log_path}"] : []
+        def create_capabilities(opts)
+          caps = opts.delete(:desired_capabilities) || Remote::W3CCapabilities.firefox
+          firefox_options_caps = caps[:firefox_options] || {}
+          caps[:firefox_options] = firefox_options_caps.merge(opts[:firefox_options] || {})
+          if opts.key?(:profile)
+            profile = opts.delete(:profile)
+            unless profile.is_a?(Profile)
+              profile = Profile.from_name(profile)
+            end
+            caps[:firefox_options][:profile] = profile.encoded
+          end
+
+          Binary.path = caps[:firefox_options][:binary] if caps[:firefox_options].key?(:binary)
+          caps
         end
+
+        def extract_service_args(args = {})
+          service_args = []
+          service_args << "--binary=#{args[:binary]}" if args.key?(:binary)
+          service_args << "–-log=#{args[:log]}" if args.key?(:log)
+          service_args << "–-marionette-port=#{args[:marionette_port]}" if args.key?(:marionette_port)
+          service_args << "–-host=#{args[:host]}" if args.key?(:host)
+          service_args << "–-port=#{args[:port]}" if args.key?(:port)
+          service_args
+        end
+
       end # W3CBridge
     end # Firefox
   end # WebDriver

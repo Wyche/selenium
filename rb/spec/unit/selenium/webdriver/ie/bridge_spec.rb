@@ -31,8 +31,8 @@ module Selenium
         before do
           @default_capabilities = Remote::Capabilities.internet_explorer
 
-          allow(IE).to receive(:driver_path).and_return('/foo')
           allow(Remote::Capabilities).to receive(:internet_explorer).and_return(caps)
+          allow(Service).to receive(:binary_path).and_return('/foo')
           allow(Service).to receive(:new).and_return(service)
         end
 
@@ -46,13 +46,13 @@ module Selenium
             http_client: http
           )
 
-          expect(caps['ignoreProtectedModeSettings']).to be true
+          expect(caps[:ignore_protected_mode_settings]).to be true
         end
 
         it 'has native events enabled by default' do
           Bridge.new(http_client: http)
 
-          expect(caps['nativeEvents']).to be true
+          expect(caps[:native_events]).to be true
         end
 
         it 'can disable native events' do
@@ -61,11 +61,11 @@ module Selenium
             http_client: http
           )
 
-          expect(caps['nativeEvents']).to be false
+          expect(caps[:native_events]).to be false
         end
 
         it 'sets the server log level and log file' do
-          expect(Service).to receive(:new).with(IE.driver_path, Service::DEFAULT_PORT, '--log-level=TRACE', '--log-file=/foo/bar')
+          expect(Service).to receive(:new).with(nil, Service::DEFAULT_PORT, '--log-level=TRACE', '--log-file=/foo/bar')
 
           Bridge.new(
             log_level: :trace,
@@ -75,7 +75,7 @@ module Selenium
         end
 
         it 'should be able to set implementation' do
-          expect(Service).to receive(:new).with(IE.driver_path, Service::DEFAULT_PORT, '--implementation=VENDOR')
+          expect(Service).to receive(:new).with(nil, Service::DEFAULT_PORT, '--implementation=VENDOR')
 
           Bridge.new(
             implementation: :vendor,
@@ -100,7 +100,7 @@ module Selenium
           custom_caps['ignoreProtectedModeSettings'] = false
 
           expect(http).to receive(:call) do |_, _, payload|
-            expect(payload[:desiredCapabilities]['ignoreProtectedModeSettings']).to be true
+            expect(payload[:desiredCapabilities][:ignore_protected_mode_settings]).to be true
             resp
           end
 

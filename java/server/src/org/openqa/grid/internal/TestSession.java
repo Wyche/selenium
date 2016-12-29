@@ -41,7 +41,6 @@ import org.openqa.grid.web.servlet.handler.RequestType;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedResponse;
 import org.openqa.grid.web.servlet.handler.WebDriverRequest;
-import org.openqa.selenium.io.IOUtils;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -234,10 +233,15 @@ public class TestSession {
 
         byte[] consumedNewWebDriverSessionBody = null;
         if (statusCode != HttpServletResponse.SC_INTERNAL_SERVER_ERROR &&
-            statusCode != HttpServletResponse.SC_NOT_FOUND) {
+            statusCode != HttpServletResponse.SC_NOT_FOUND &&
+            statusCode != HttpServletResponse.SC_BAD_REQUEST &&
+            statusCode != HttpServletResponse.SC_UNAUTHORIZED) {
           consumedNewWebDriverSessionBody = updateHubIfNewWebDriverSession(request, proxyResponse);
         }
-        if (newSessionRequest && statusCode == HttpServletResponse.SC_INTERNAL_SERVER_ERROR) {
+        if (newSessionRequest &&
+            (statusCode == HttpServletResponse.SC_INTERNAL_SERVER_ERROR ||
+            statusCode == HttpServletResponse.SC_BAD_REQUEST ||
+            statusCode == HttpServletResponse.SC_UNAUTHORIZED)) {
           removeIncompleteNewSessionRequest();
         }
         if (statusCode == HttpServletResponse.SC_NOT_FOUND) {
@@ -414,8 +418,7 @@ public class TestSession {
   }
 
   private void writeRawBody(HttpServletResponse response, byte[] rawBody) throws IOException {
-    OutputStream out = response.getOutputStream();
-    try {
+    try (OutputStream out = response.getOutputStream()) {
       // We need to set the Content-Length header before we write to the output stream. Usually
       // the
       // Content-Length header is already set because we take it from the proxied request. But, it
@@ -432,8 +435,6 @@ public class TestSession {
       out.write(rawBody);
     } catch (IOException e) {
       throw new ClientGoneException(e);
-    } finally {
-      IOUtils.closeQuietly(out);
     }
   }
 
@@ -488,7 +489,7 @@ public class TestSession {
       // the location needs to point to the hub that will proxy
       // everything.
       if (name.equalsIgnoreCase("Location")) {
-        URL returnedLocation = new URL(value);
+        URL returnedLocation = new URL(remoteURL, value);
         String driverPath = remoteURL.getPath();
         String wrongPath = returnedLocation.getPath();
         String correctPath = wrongPath.replace(driverPath, "");

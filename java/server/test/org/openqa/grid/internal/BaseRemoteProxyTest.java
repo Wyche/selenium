@@ -25,14 +25,14 @@ import com.google.gson.Gson;
 
 import com.beust.jcommander.JCommander;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.openqa.grid.common.RegistrationRequest;
 import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.selenium.remote.CapabilityType;
-import org.openqa.selenium.remote.JsonToBeanConverter;
+import org.openqa.selenium.remote.DesiredCapabilities;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,15 +41,15 @@ import java.util.Map;
 
 public class BaseRemoteProxyTest {
 
-  private static RemoteProxy p1 = null;
-  private static RemoteProxy p2 = null;
+  private RemoteProxy p1 = null;
+  private RemoteProxy p2 = null;
 
-  private static Map<String, Object> app1Capability = new HashMap<>();
-  private static Map<String, Object> app2Capability = new HashMap<>();
-  private static Registry registry = Registry.newInstance();
+  private Map<String, Object> app1Capability = new HashMap<>();
+  private Map<String, Object> app2Capability = new HashMap<>();
+  private Registry registry = Registry.newInstance();
 
-  @BeforeClass
-  public static void setup() throws Exception {
+  @Before
+  public void setup() throws Exception {
 
     app1Capability.put(CapabilityType.APPLICATION_NAME, "app1");
     app2Capability.put(CapabilityType.APPLICATION_NAME, "app2");
@@ -64,7 +64,6 @@ public class BaseRemoteProxyTest {
 
   }
 
-
   @Test
   public void testEqual() {
     assertTrue(p1.equals(p1));
@@ -77,10 +76,8 @@ public class BaseRemoteProxyTest {
     cap.put(CapabilityType.APPLICATION_NAME, "corrupted");
 
     GridNodeConfiguration config = new Gson().fromJson("{\"remoteHost\":\"ebay.com\"}", GridNodeConfiguration.class);
-
-    RegistrationRequest request = new RegistrationRequest();
-    request.addDesiredCapability(cap);
-    request.setConfiguration(config);
+    config.capabilities.add(new DesiredCapabilities(cap));
+    RegistrationRequest request = new RegistrationRequest(config);
 
     new BaseRemoteProxy(request, registry);
   }
@@ -162,8 +159,8 @@ public class BaseRemoteProxyTest {
   }
 
 
-  @AfterClass
-  public static void teardown() {
+  @After
+  public void teardown() {
     registry.stop();
   }
 

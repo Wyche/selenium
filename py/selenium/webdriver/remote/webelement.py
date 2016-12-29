@@ -15,26 +15,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import base64
 import hashlib
 import pkgutil
 import os
 import zipfile
-try:
-    from StringIO import StringIO as IOStream
-except ImportError:  # 3+
-    from io import BytesIO as IOStream
-import base64
 
 from .command import Command
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.utils import keys_to_typing
 
-
+# Python 3 imports
 try:
     str = basestring
 except NameError:
     pass
+
+try:
+    from StringIO import StringIO as IOStream
+except ImportError:  # 3+
+    from io import BytesIO as IOStream
+
+getAttribute_js = pkgutil.get_data(__package__, 'getAttribute.js').decode('utf8')
+isDisplayed_js = pkgutil.get_data(__package__, 'isDisplayed.js').decode('utf8')
 
 
 class WebElement(object):
@@ -103,7 +107,7 @@ class WebElement(object):
             return self._execute(Command.GET_ELEMENT_PROPERTY, {"name": name})["value"]
         except WebDriverException:
             # if we hit an end point that doesnt understand getElementProperty lets fake it
-            self.parent.execute_script('return arguments[0][arguments[1]]', self, name)
+            return self.parent.execute_script('return arguments[0][arguments[1]]', self, name)
 
     def get_attribute(self, name):
         """Gets the given attribute or property of the element.
@@ -129,10 +133,9 @@ class WebElement(object):
         """
 
         attributeValue = ''
-        if self._w3c :
-            raw = pkgutil.get_data(__package__, 'getAttribute.js')
+        if self._w3c:
             attributeValue = self.parent.execute_script(
-                "return (%s).apply(null, arguments);" % raw,
+                "return (%s).apply(null, arguments);" % getAttribute_js,
                 self, name)
         else:
             resp = self._execute(Command.GET_ELEMENT_ATTRIBUTE, {'name': name})
@@ -157,7 +160,7 @@ class WebElement(object):
         """Finds element within this element's children by ID.
 
         :Args:
-            - id_ - ID of child element to locate.
+            - id\_ - ID of child element to locate.
         """
         return self.find_element(by=By.ID, value=id_)
 
@@ -165,7 +168,7 @@ class WebElement(object):
         """Finds a list of elements within this element's children by ID.
 
         :Args:
-            - id_ - Id of child element to find.
+            - id\_ - Id of child element to find.
         """
         return self.find_elements(by=By.ID, value=id_)
 
@@ -316,7 +319,7 @@ class WebElement(object):
 
         :Args:
             - value - A string for typing, or setting form fields.  For setting
-            file inputs, this could be a local file path.
+              file inputs, this could be a local file path.
 
         Use this to send simple key events or to fill out form fields::
 
@@ -346,10 +349,10 @@ class WebElement(object):
     # RenderedWebElement Items
     def is_displayed(self):
         """Whether the element is visible to a user."""
-        if self._w3c :
-            raw = pkgutil.get_data(__package__, 'isDisplayed.js')
+        # Only go into this conditional for browsers that don't use the atom themselves
+        if self._w3c and self.parent.capabilities['browserName'] == 'safari':
             return self.parent.execute_script(
-                "return (%s).apply(null, arguments);" % raw,
+                "return (%s).apply(null, arguments);" % isDisplayed_js,
                 self)
         else:
             return self._execute(Command.IS_ELEMENT_DISPLAYED)['value']

@@ -20,7 +20,6 @@ package org.openqa.grid.internal.utils;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
-import org.openqa.grid.common.GridRole;
 import org.openqa.grid.common.RegistrationRequest;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.grid.internal.utils.configuration.StandaloneConfiguration;
@@ -38,7 +37,7 @@ public class SelfRegisteringRemoteTest {
 
   private final class DummyGridNodeServer implements GridNodeServer {
     public Map<String, Class<? extends Servlet>> extraServlets;
- 
+
     @Override
     public void boot() throws Exception { }
 
@@ -63,16 +62,15 @@ public class SelfRegisteringRemoteTest {
   @Test
   public void testHubRegistrationWhenPortExplicitlyZeroedOut() throws MalformedURLException {
     GridNodeServer server = new DummyGridNodeServer();
-    RegistrationRequest config = new RegistrationRequest();
-    config.setRole(GridRole.NODE);
-    config.getConfiguration().port = 0;
-    config.getConfiguration().hub = "http://locahost:4444";
-    SelfRegisteringRemote remote = new SelfRegisteringRemote(config);
+    RegistrationRequest request = new RegistrationRequest();
+    request.getConfiguration().port = 0;
+    request.getConfiguration().hub = "http://locahost:4444";
+    SelfRegisteringRemote remote = new SelfRegisteringRemote(request);
     remote.setRemoteServer(server);
     remote.updateConfigWithRealPort();
-    String host = remote.getConfiguration().getRemoteHost();
+    String remoteHost = remote.getConfiguration().getRemoteHost();
     assertEquals("Ensure that the remote host is updated properly",
-                 "http://localhost:" + server.getRealPort(), host);
+                 "http://" + request.getConfiguration().host + ":" + server.getRealPort(), remoteHost);
 
   }
 
@@ -87,9 +85,9 @@ public class SelfRegisteringRemoteTest {
     RegistrationRequest registrationRequest = RegistrationRequest.build(configuration);
     SelfRegisteringRemote remote = new SelfRegisteringRemote(registrationRequest);
 
-    // there should be two servlets on the remote's map -- The resource servlet, and the one
-    // we added above.
-    assertEquals(2, remote.getNodeServlets().size());
+    // there should be three servlets on the remote's map -- The resource servlet, the
+    // help servlet, and the one we added above.
+    assertEquals(3, remote.getNodeServlets().size());
     assertEquals(ResourceServlet.class, remote.getNodeServlets().get("/resources/*"));
     assertEquals(DisplayHelpServlet.class,
                  remote.getNodeServlets().get("/extra/DisplayHelpServlet/*"));
@@ -99,7 +97,7 @@ public class SelfRegisteringRemoteTest {
     remote.startRemoteServer(); // does not actually start anything.
 
     // verify the expected extra servlets also made it to the server instance
-    assertEquals(2, ((DummyGridNodeServer) server).extraServlets.size());
+    assertEquals(3, ((DummyGridNodeServer) server).extraServlets.size());
     assertEquals(ResourceServlet.class,
                  ((DummyGridNodeServer) server).extraServlets.get("/resources/*"));
     assertEquals(DisplayHelpServlet.class,

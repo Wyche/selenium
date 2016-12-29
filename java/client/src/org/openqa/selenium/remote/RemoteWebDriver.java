@@ -32,7 +32,6 @@ import org.openqa.selenium.Dimension;
 import org.openqa.selenium.HasCapabilities;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoSuchFrameException;
-import org.openqa.selenium.NoSuchSessionException;
 import org.openqa.selenium.NoSuchWindowException;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.Platform;
@@ -489,6 +488,11 @@ public class RemoteWebDriver implements WebDriver, JavascriptExecutor,
   }
 
   public void quit() {
+    // no-op if session id is null. We're only going to make ourselves unhappy
+    if (sessionId == null) {
+      return;
+    }
+
     try {
       execute(DriverCommand.QUIT);
     } finally {
@@ -605,7 +609,7 @@ public class RemoteWebDriver implements WebDriver, JavascriptExecutor,
       // {"ELEMENT": id} to RemoteWebElements.
       Object value = converter.apply(response.getValue());
       response.setValue(value);
-    } catch (NoSuchSessionException e) {
+    } catch (WebDriverException e) {
       throw e;
     } catch (Exception e) {
       log(sessionId, command.getName(), command, When.EXCEPTION);

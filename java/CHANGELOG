@@ -1,3 +1,82 @@
+v3.0.2
+======
+
+* Fixes to make htmlrunner work.
+* Removed native events from FirefoxDriver.
+* Truncate the string representation of capabilities for display purposes.
+* Implemented session storage for w3c codec.
+* Change server dependency to htmlunit 2.23.2.
+* [Grid] DefaultCapabilityMatcher now considers "browserVersion".
+* [Grid] Fix node registration issue for Se2.x nodes with -servlets.
+* [Grid] Windows nodes are no longer displayed as "mixedOS".
+* [Grid] browser version capability specified on node command line no longer parsed to a Number
+
+v3.0.1
+======
+
+* Include ElementScrollBehavior enum in the release.
+* Add dependency on HTMLUnit to be included in the standalone server.
+* Grid new session requests pass original request through to the node
+  without any modifications.
+* Fix NPE in htmlrunner when port is not specified.
+* FirefoxDriver (legacy) fix to cleanup temp filesystem on quit (#2914 #2908).
+
+v3.0.0
+======
+
+IMPORTANT CHANGES
+
+* Firefox is only fully supported at version 47.0.1 or earlier. Support
+  for later versions of firefox is provided by geckodriver, which is
+  based on the evolving W3C WebDriver spec, and uses the wire protocol
+  in that spec, which is liable to change without notice.
+* You may wish to choose an ESR release such as 45.4.0esr or earlier.
+* Firefox 47.0.0 is not supported at all.
+
+Other major changes:
+
+* Stability fixes in Grid.
+* All Grid nodes can now offer help.
+* Updated to the latest version of HtmlUnitDriver.
+* Re-enabled log gathering for the standalone server.
+* Firefox profile is passed to both the legacy FirefoxDriver and
+  geckodriver.
+
+v3.0.0-beta4
+============
+
+IMPORTANT CHANGES
+
+* Firefox is only fully supported at version 47.0.1 or earlier. Support
+  for later versions of firefox is provided by geckodriver, which is
+  based on the evolving W3C WebDriver spec, and uses the wire protocol
+  in that spec, which is liable to change without notice.
+* You may wish to choose an ESR release such as 45.4.0esr or earlier.
+* Firefox 47.0.0 is not supported at all.
+
+Other major changes:
+
+* Remove OSS safaridriver in preference for Apple's own SafariDriver
+  that ships as part of Safari 10.
+* [Grid] -nodeConfig (json) files have a new flatter format (#2789)
+* [Grid] Fix #2721, -nodeConfig (json) settings were not always
+  applied
+* [Grid] Cleanup the api for RegistrationRequest -- will break
+  compilation for people moving from 2.x -- removed the ability to
+  change the GridNodeConfiguration reference via the
+  RegistrationRequest object and removed all other setters
+* Include the selenium version in exceptions (again).
+* [HTML suite runner] Better flag compatibility with the 2.x
+  selenium-server-standalone.
+* Fix #2727, combine -jettyThreads and -jettyMaxThreads (#2735)
+* [atoms] Cleaning up getAttribute dependencies, reducing size from
+  36K to 7K
+* Better support for the W3C webdriver wire codec.
+* Added ability to use FirefoxOptions when starting firefox.
+* Fixed a bug where the firefox profile was not being passed to the
+  geckodriver.
+* SafariDriver's Technology Preview can be used if installed.
+
 v3.0.0-beta3
 ============
 
@@ -80,7 +159,7 @@ Firefox:
     * Weakening platform restriction to enable 64-bit support
     * Fixing closed window handling in FF45
     * Implementing a capability that disables overlapping checks - "overlappingCheckDisabled"
-    
+
 WebDriver:
     * Fix deselecting options in <select>, actually throw Exceptions documented
     * handle special case spellcheck attribute Fixes #1605
@@ -98,7 +177,7 @@ Firefox:
     * Bumping up the max version
     * Fixing scrolling to elements in overflow:hidden blocks. Fixes issue #1527
     * Fixing issue #1509
-    * Deleting deprecated constant 
+    * Deleting deprecated constant
     * Deleting unused method FirefoxBinary.createProfile
 
 WebDriver:
@@ -137,7 +216,7 @@ WebDriver:
     * Changes to simplify the execution of finding elements.
     * Fixing issue #1479. The only reasonable thing we can do for select elements is to disable clickability checking, see https://gist.github.com/p0deje/c549e93fa19bf7aaee49
 
-Grid: 
+Grid:
     * Found a better place to convert seconds to milliseconds
 
 v2.49.1
@@ -1413,11 +1492,11 @@ WebDriver:
     stable on Windows.
   * Added the enablePersistenHover capability to allow the user to specify
     whether to use the persistent hover thread in the IE driver. Defaults
-	to true for IE.
+    to true for IE.
   * Added support for native events for Firefox 15 and 16.
   * Removed deprecation from ChromeDriver constructors that take a Capabilities
     object. Also added a method to set experimental options in ChromeOptions
-	which may be used to set options that aren't exposed through the ChromeOptions
+    which may be used to set options that aren't exposed through the ChromeOptions
     API.
   * Fixed SafariDriver to allow calling .quit() consecutively without error.
   * Modified FirefoxDriver to use atoms to switch between frames.
@@ -2175,5 +2254,3 @@ Grid:
   * Track when a session has become orphaned.  I.e., when the client sends no
     commands after the initial session creation.  This almost always indicates
     the client is no longer connected and the session is unusable immediately.
-
-

@@ -50,7 +50,7 @@ public class BuckBuild {
   }
 
   public Path go() throws IOException {
-    Path projectRoot = InProject.locate("Rakefile").toPath().getParent();
+    Path projectRoot = InProject.locate("Rakefile").getParent();
 
     if (!isInDevMode()) {
       // we should only need to do this when we're in dev mode
@@ -67,8 +67,7 @@ public class BuckBuild {
 
     ImmutableList.Builder<String> builder = ImmutableList.builder();
     findBuck(projectRoot, builder);
-    builder.add("build");
-    builder.add(target);
+    builder.add("build", "--config", "color.ui=never", target);
 
     ImmutableList<String> command = builder.build();
     CommandLine commandLine = new CommandLine(command.toArray(new String[command.size()]));
@@ -85,7 +84,7 @@ public class BuckBuild {
   private Path findOutput(Path projectRoot) throws IOException {
     ImmutableList.Builder<String> builder = ImmutableList.builder();
     findBuck(projectRoot, builder);
-    builder.add("targets", "--show-output", target);
+    builder.add("targets", "--show-full-output", "--config", "color.ui=never", target);
 
     ImmutableList<String> command = builder.build();
     CommandLine commandLine = new CommandLine(command.toArray(new String[command.size()]));
@@ -96,7 +95,8 @@ public class BuckBuild {
       throw new WebDriverException("Unable to find output! " + target);
     }
 
-    String[] allLines = commandLine.getStdOut().split(LINE_SEPARATOR.value());
+    String stdOut = commandLine.getStdOut();
+    String[] allLines = stdOut.split(LINE_SEPARATOR.value());
     String lastLine = null;
     for (String line : allLines) {
       if (line.startsWith(target)) {
@@ -104,7 +104,7 @@ public class BuckBuild {
         break;
       }
     }
-    Preconditions.checkNotNull(lastLine);
+    Preconditions.checkNotNull(lastLine, "Value read: %s", stdOut);
 
     List<String> outputs = Splitter.on(' ').limit(2).splitToList(lastLine);
     if (outputs.size() != 2) {
@@ -140,7 +140,7 @@ public class BuckBuild {
 
   private void downloadBuckPexIfNecessary(ImmutableList.Builder<String> builder)
     throws IOException {
-    Path projectRoot = InProject.locate("Rakefile").getParentFile().toPath();
+    Path projectRoot = InProject.locate("Rakefile").getParent();
     String buckVersion = new String(Files.readAllBytes(projectRoot.resolve(".buckversion"))).trim();
 
     Path pex = projectRoot.resolve("buck-out/crazy-fun/" + buckVersion + "/buck.pex");

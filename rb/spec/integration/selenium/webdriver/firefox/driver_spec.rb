@@ -39,43 +39,38 @@ module Selenium
           @opt[:url] = restart_remote_server if GlobalTestEnv.driver == :remote
         end
 
-        it 'creates default capabilities' do
-          driver_name = GlobalTestEnv.driver
-          driver_name = :firefox if driver_name == :firefox
-
-          begin
-            driver1 = Selenium::WebDriver.for driver_name, @opt
-            expect(driver1.capabilities.browser_version).to match(/^\d\d\./)
-            expect(driver1.capabilities.platform_name).to_not be_nil
-            expect(driver1.capabilities.platform_version).to_not be_nil
-            expect(driver1.capabilities.accept_ssl_certs).to be == false
-            expect(driver1.capabilities.page_load_strategy).to be == 'normal'
-            expect(driver1.capabilities.proxy).to be_nil
-            if GlobalTestEnv.driver == :remote
-              expect(driver1.capabilities.remote_session_id).to match(/^\h{8}-\h{4}-\h{4}-\h{4}-\h{10}/)
-            else
+        not_compliant_on driver: :remote do
+          it 'creates default capabilities' do
+            begin
+              driver1 = Selenium::WebDriver.for GlobalTestEnv.driver, @opt
+              expect(driver1.capabilities.proxy).to be_nil
+              expect(driver1.capabilities.platform_name).to_not be_nil
+              expect(driver1.capabilities.browser_version).to match(/^\d\d\./)
+              expect(driver1.capabilities.platform_version).to_not be_nil
+              expect(driver1.capabilities.accept_ssl_certs).to be == false
               expect(driver1.capabilities.remote_session_id).to be_nil
+              expect(driver1.capabilities.page_load_strategy).to be == 'normal'
+              expect(driver1.capabilities.raise_accessibility_exceptions).to be == false
+              expect(driver1.capabilities.rotatable).to be == false
+            ensure
+              driver1.quit
             end
-            expect(driver1.capabilities.raise_accessibility_exceptions).to be == false
-            expect(driver1.capabilities.rotatable).to be == false
-          ensure
-            driver1.quit
           end
         end
 
-        # Test this in isolation; Firefox doesn't like to switch between binaries in same session
+        # Remote needs to implement firefox options
         not_compliant_on driver: :remote do
           it 'takes a binary path as an argument' do
             pending "Set ENV['ALT_FIREFOX_BINARY'] to test this" unless ENV['ALT_FIREFOX_BINARY']
-
             begin
-              driver1 = Selenium::WebDriver.for GlobalTestEnv.driver, @opt
+              @path = Firefox::Binary.path
+              driver1 = Selenium::WebDriver.for GlobalTestEnv.driver, @opt.dup
 
               default_version = driver1.capabilities.version
               expect { driver1.capabilities.browser_version }.to_not raise_exception NoMethodError
               driver1.quit
 
-              caps = Remote::Capabilities.firefox(firefox_binary: ENV['ALT_FIREFOX_BINARY'])
+              caps = Remote::Capabilities.firefox(firefox_options: {binary: ENV['ALT_FIREFOX_BINARY']})
               @opt[:desired_capabilities] = caps
               driver2 = Selenium::WebDriver.for GlobalTestEnv.driver, @opt
 
@@ -83,7 +78,30 @@ module Selenium
               expect { driver2.capabilities.browser_version }.to_not raise_exception NoMethodError
               driver2.quit
             ensure
-              Firefox::Binary.reset_path!
+              Firefox::Binary.path = @path
+            end
+          end
+
+          it 'gives precedence to firefox options versus argument switch' do
+            pending "Set ENV['ALT_FIREFOX_BINARY'] to test this" unless ENV['ALT_FIREFOX_BINARY']
+            begin
+              @path = Firefox::Binary.path
+              driver1 = Selenium::WebDriver.for GlobalTestEnv.driver, @opt.dup
+
+              default_path = Firefox::Binary.path
+              default_version = driver1.capabilities.version
+              driver1.quit
+
+              caps = Remote::Capabilities.firefox(firefox_options: {binary: ENV['ALT_FIREFOX_BINARY']},
+                                                  service_args: {binary: default_path})
+              @opt[:desired_capabilities] = caps
+              driver2 = Selenium::WebDriver.for GlobalTestEnv.driver, @opt
+
+              expect(driver2.capabilities.version).to_not eql(default_version)
+              expect { driver2.capabilities.browser_version }.to_not raise_exception NoMethodError
+              driver2.quit
+            ensure
+              Firefox::Binary.path = @path
             end
           end
         end

@@ -22,12 +22,6 @@ require_relative 'spec_helper'
 module Selenium
   module WebDriver
     describe Element do
-      before do
-        compliant_on browser: :safari do
-          sleep 0.5 # Some kind of race condition preventing initial navigation; only on safari
-        end
-      end
-
       it 'should click' do
         driver.navigate.to url_for('formPage.html')
         driver.find_element(id: 'imageButton').click
@@ -37,7 +31,7 @@ module Selenium
         it 'should raise if different element receives click' do
           driver.navigate.to url_for('click_tests/overlapping_elements.html')
           element_error = 'Other element would receive the click: <div id="over"><\/div>'
-          error = /Element is not clickable at point \(\d+, \d+\)\. #{element_error}/
+          error = /is not clickable at point \(\d+, \d+\)\. #{element_error}/
           expect { driver.find_element(id: 'contents').click }
             .to raise_error(Selenium::WebDriver::Error::UnknownError, error)
         end
@@ -62,12 +56,14 @@ module Selenium
         driver.find_element(id: 'working').send_keys('foo', 'bar')
       end
 
-      it 'should send key presses' do
-        driver.navigate.to url_for('javascriptPage.html')
-        key_reporter = driver.find_element(id: 'keyReporter')
+      not_compliant_on browser: :safari do
+        it 'should send key presses' do
+          driver.navigate.to url_for('javascriptPage.html')
+          key_reporter = driver.find_element(id: 'keyReporter')
 
-        key_reporter.send_keys('Tet', :arrow_left, 's')
-        expect(key_reporter.attribute('value')).to eq('Test')
+          key_reporter.send_keys('Tet', :arrow_left, 's')
+          expect(key_reporter.attribute('value')).to eq('Test')
+        end
       end
 
       # PhantomJS on windows issue: https://github.com/ariya/phantomjs/issues/10993
@@ -96,6 +92,13 @@ module Selenium
       it 'should return nil for non-existent attributes' do
         driver.navigate.to url_for('formPage.html')
         expect(driver.find_element(id: 'withText').attribute('nonexistent')).to be_nil
+      end
+
+      not_compliant_on browser: :edge do
+        it 'should get property value' do
+          driver.navigate.to url_for('formPage.html')
+          expect(driver.find_element(id: 'withText').property('nodeName')).to eq('TEXTAREA')
+        end
       end
 
       it 'should clear' do
@@ -130,33 +133,40 @@ module Selenium
         expect(driver.find_element(class: 'header').text).to eq('XHTML Might Be The Future')
       end
 
-      it 'should get displayed' do
-        driver.navigate.to url_for('xhtmlTest.html')
-        expect(driver.find_element(class: 'header')).to be_displayed
+      not_compliant_on browser: :safari do
+        it 'should get displayed' do
+          driver.navigate.to url_for('xhtmlTest.html')
+          expect(driver.find_element(class: 'header')).to be_displayed
+        end
       end
 
-      it 'should get location' do
-        driver.navigate.to url_for('xhtmlTest.html')
-        loc = driver.find_element(class: 'header').location
+      # Remote w3c bug: https://github.com/SeleniumHQ/selenium/issues/2857
+      not_compliant_on driver: :remote, browser: :firefox do
+        context 'size and location' do
+          it 'should get current location' do
+            driver.navigate.to url_for('xhtmlTest.html')
+            loc = driver.find_element(class: 'header').location
 
-        expect(loc.x).to be >= 1
-        expect(loc.y).to be >= 1
-      end
+            expect(loc.x).to be >= 1
+            expect(loc.y).to be >= 1
+          end
 
-      it 'should get location once scrolled into view' do
-        driver.navigate.to url_for('javascriptPage.html')
-        loc = driver.find_element(id: 'keyUp').location_once_scrolled_into_view
+          it 'should get location once scrolled into view' do
+            driver.navigate.to url_for('javascriptPage.html')
+            loc = driver.find_element(id: 'keyUp').location_once_scrolled_into_view
 
-        expect(loc.x).to be >= 1
-        expect(loc.y).to be >= 0 # can be 0 if scrolled to the top
-      end
+            expect(loc.x).to be >= 1
+            expect(loc.y).to be >= 0 # can be 0 if scrolled to the top
+          end
 
-      it 'should get size' do
-        driver.navigate.to url_for('xhtmlTest.html')
-        size = driver.find_element(class: 'header').size
+          it 'should get size' do
+            driver.navigate.to url_for('xhtmlTest.html')
+            size = driver.find_element(class: 'header').size
 
-        expect(size.width).to be > 0
-        expect(size.height).to be > 0
+            expect(size.width).to be > 0
+            expect(size.height).to be > 0
+          end
+        end
       end
 
       # Firefox - "Actions Endpoint Not Yet Implemented"

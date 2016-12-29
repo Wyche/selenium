@@ -17,12 +17,12 @@
 
 package org.openqa.selenium;
 
+import org.openqa.selenium.internal.BuildInfo;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.openqa.selenium.internal.BuildInfo;
 
 public class WebDriverException extends RuntimeException {
 
@@ -50,7 +50,8 @@ public class WebDriverException extends RuntimeException {
 
   @Override
   public String getMessage() {
-    return createMessage(super.getMessage());
+    return super.getCause() instanceof WebDriverException
+           ? super.getMessage() : createMessage(super.getMessage());
   }
 
   private String createMessage(String originalMessageString) {

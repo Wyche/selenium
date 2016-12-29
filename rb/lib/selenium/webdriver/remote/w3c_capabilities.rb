@@ -76,16 +76,17 @@ module Selenium
           end
 
           def firefox(opts = {})
-            opts[:browser_version] = opts.delete :version
-            opts[:platform_name] = opts.delete :platform
+            opts[:browser_version] = opts.delete(:version) if opts.key?(:version)
+            opts[:platform_name] = opts.delete(:platform) if opts.key?(:platform)
 
-            new({browser_name: 'firefox'}.merge(opts))
+            new({browser_name: 'firefox', marionette: true}.merge(opts))
           end
 
           alias_method :ff, :firefox
 
           def w3c?(opts = {})
-            !opts[:desired_capabilities].is_a?(Capabilities)
+            opts[:marionette] != false &&
+                (!opts[:desired_capabilities] || opts[:desired_capabilities][:marionette] != false)
           end
 
           #
@@ -190,6 +191,8 @@ module Selenium
               hash['platform'] = value.to_s.upcase
             when :proxy
               hash['proxy'] = value.as_json if value
+            when :firefox_options
+              hash['moz:firefoxOptions'] = value
             when String, :firefox_binary
               hash[key.to_s] = value
             when Symbol

@@ -31,7 +31,6 @@ require 'rake-tasks/crazy_fun/mappings/visualstudio'
 require 'rake-tasks/task-gen'
 require 'rake-tasks/checks'
 require 'rake-tasks/dotnet'
-require 'rake-tasks/zip'
 require 'rake-tasks/c'
 require 'rake-tasks/selenium'
 require 'rake-tasks/se-ide'
@@ -50,7 +49,7 @@ def release_version
 end
 
 def version
-  "#{release_version}.0-beta3"
+  "#{release_version}.1"
 end
 
 ide_version = "2.8.0"
@@ -181,11 +180,11 @@ task :ide_proxy_remove => [ "se_ide:remove_proxy" ]
 task :ide_bamboo => ["se_ide:assemble_ide_in_bamboo"]
 
 task :test_javascript => [
-  '//javascript/atoms:test:run',
-  '//javascript/webdriver:test:run',
-  '//javascript/webdriver:es6_test:run',
-  '//javascript/selenium-atoms:test:run',
-  '//javascript/selenium-core:test:run']
+  'calcdeps',
+  '//javascript/atoms:atoms-chrome:run',
+  '//javascript/webdriver:webdriver-chrome:run',
+  '//javascript/selenium-atoms:selenium-atoms-chrome:run',
+  '//javascript/selenium-core:selenium-core-chrome:run']
 task :test_chrome => [ "//java/client/test/org/openqa/selenium/chrome:chrome:run" ]
 task :test_chrome_atoms => [
   '//javascript/atoms:test_chrome:run',
@@ -200,11 +199,18 @@ task :test_grid => [
   "//java/server/test/org/openqa/grid:grid:run",
   "//java/server/test/org/openqa/grid/e2e:e2e:run"
 ]
-task :test_ie => [ "//java/client/test/org/openqa/selenium/ie:ie:run" ]
+task :test_ie => [
+  "//cpp/iedriverserver:win32",
+  "//cpp/iedriverserver:x64",
+  "//java/client/test/org/openqa/selenium/ie:ie:run"
+]
 task :test_jobbie => [ :test_ie ]
 task :test_firefox => [ "//java/client/test/org/openqa/selenium/firefox:test-synthesized:run" ]
 task :test_opera => [ "//java/client/test/org/openqa/selenium/opera:opera:run" ]
-task :test_remote_server => [ '//java/server/test/org/openqa/selenium/remote/server:small-tests:run' ]
+task :test_remote_server => [
+   '//java/server/test/org/openqa/selenium/remote/server:small-tests:run',
+   '//java/server/test/org/openqa/selenium/remote/server/log:test:run',
+]
 task :test_remote => [
   '//java/client/test/org/openqa/selenium/remote:common-tests:run',
   '//java/client/test/org/openqa/selenium/remote:client-tests:run',
@@ -252,6 +258,14 @@ task :test_java => [
   "test_grid",
 ]
 
+task :test_java_small_tests => [
+  "//java/client/test/org/openqa/selenium/support:small-tests:run",
+  "//java/client/test/org/openqa/selenium/remote:common-tests:run",
+  "//java/client/test/org/openqa/selenium/remote:client-tests:run",
+  "//java/server/test/org/openqa/selenium/remote/server:small-tests:run",
+  "//java/server/test/org/openqa/selenium/remote/server/log:test:run",
+]
+
 task :test_rb => [
   "//rb:unit-test",
   "//rb:chrome-test",
@@ -270,7 +284,7 @@ task :test_rb => [
   ("//rb:remote-edge-test" if windows?)
 ].compact
 
-task :test_py => [ :py_prep_for_install_release, "//py:firefox_test:run" ]
+task :test_py => [ :py_prep_for_install_release, "//py:marionette_test:run" ]
 
 task :test_dotnet => [
   "//dotnet/test:firefox:run"
@@ -288,6 +302,7 @@ task :build => [:all, :firefox, :remote, :selenium, :tests]
 
 desc 'Clean build artifacts.'
 task :clean do
+  rm_rf 'buck-out/'
   rm_rf 'build/'
   rm_rf 'java/client/build/'
   rm_rf 'dist/'
@@ -343,10 +358,7 @@ task :py_docs => "//py:docs"
 task :py_install =>  "//py:install"
 
 task :py_release => :py_prep_for_install_release do
-    sh "grep -v test setup.py > setup_release.py; mv setup_release.py setup.py"
-    sh "python setup.py sdist upload"
-    sh "python setup.py bdist_wheel upload"
-    sh "git checkout setup.py"
+    sh "python setup.py sdist bdist_wheel upload"
 end
 
 file "cpp/iedriver/sizzle.h" => [ "//third_party/js/sizzle:sizzle:header" ] do
@@ -540,11 +552,34 @@ task :release_ide  => [:ide] do
 end
 
 namespace :node do
+  task :atoms => [
+    "//javascript/atoms/fragments:is-displayed",
+    "//javascript/webdriver/atoms:getAttribute",
+  ] do
+    baseDir = "javascript/node/selenium-webdriver/lib/atoms"
+    mkdir_p baseDir
+
+    [
+      Rake::Task["//javascript/atoms/fragments:is-displayed"].out,
+      Rake::Task["//javascript/webdriver/atoms:getAttribute"].out,
+    ].each do |atom|
+      name = File.basename(atom)
+
+      puts "Generating #{atom} as #{name}"
+      File.open(File.join(baseDir, name), "w") do |f|
+        f << "// GENERATED CODE - DO NOT EDIT\n"
+        f << "module.exports = "
+        f << IO.read(atom).strip
+        f << ";\n"
+      end
+    end
+  end
+
   task :deploy => [
+    "node:atoms",
     "//cpp:noblur",
     "//cpp:noblur64",
     "//javascript/firefox-driver:webdriver",
-    "//javascript/safari-driver:client",
   ] do
     cmd =  "node javascript/node/deploy.js" <<
         " --output=build/javascript/node/selenium-webdriver" <<
@@ -554,7 +589,6 @@ namespace :node do
         " --resource=build/cpp/amd64/libnoblur64.so:firefox/amd64/libnoblur64.so" <<
         " --resource=build/cpp/i386/libnoblur.so:firefox/i386/libnoblur.so" <<
         " --resource=build/javascript/firefox-driver/webdriver.xpi:firefox/webdriver.xpi" <<
-        " --resource=buck-out/gen/javascript/safari-driver/client.js:safari/client.js" <<
         " --resource=common/src/web/:test/data/" <<
         " --exclude_resource=common/src/web/Bin" <<
         " --exclude_resource=.gitignore" <<
@@ -573,55 +607,6 @@ namespace :safari do
   task :build => [
     "//java/client/src/org/openqa/selenium/safari"
   ]
-end
-
-namespace :marionette do
-  atoms_file = "build/javascript/marionette/atoms.js"
-  func_lookup = {"//javascript/atoms/fragments:clear:firefox" => "clearElement",
-                 "//javascript/webdriver/atoms/fragments:get_attribute:firefox" => "getElementAttribute",
-                 "//javascript/webdriver/atoms/fragments:get_text:firefox" => "getElementText",
-                 "//javascript/atoms/fragments:is_enabled:firefox" => "isElementEnabled",
-                 "//javascript/webdriver/atoms/fragments:is_selected:firefox" => "isElementSelected",
-                 "//javascript/atoms/fragments:is_displayed:firefox" => "isElementDisplayed"}
-
-  # This task takes all the relevant Marionette atom dependencies
-  # (listed in func_lookup) and concatenates them to a single atoms.js
-  # file.
-  #
-  # The function names are defined in the func_lookup dictionary of
-  # target to name.
-  #
-  # Instead of having this custom behaviour in Selenium, Marionette
-  # should use the individually generated .js atom files directly in
-  # the future.
-  #
-  # (See Mozilla bug 936204.)
-
-  desc "Generate Marionette atoms"
-  task :atoms => func_lookup.keys do |task|
-    b = StringIO.new
-    b << File.read("javascript/marionette/COPYING") << "\n"
-    b << "\n"
-    b << "const EXPORTED_SYMBOLS = [\"atoms\"];" << "\n"
-    b << "\n"
-    b << "function atoms() {};" << "\n"
-    b << "\n"
-
-    task.prerequisites.each do |target|
-      out = Rake::Task[target].out
-      atom = File.read(out).chop
-
-      b << "// target #{target}" << "\n"
-      b << "atoms.#{func_lookup[target]} = #{atom};" << "\n"
-      b << "\n"
-    end
-
-    puts "Generating uberatoms file: #{atoms_file}"
-    FileUtils.mkpath("build/javascript/marionette")
-    File.open("build/javascript/marionette/atoms.js", "w+") do |h|
-      h.write(b.string)
-    end
-  end
 end
 
 task :authors do
