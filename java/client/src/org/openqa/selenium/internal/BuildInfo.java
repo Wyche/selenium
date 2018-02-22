@@ -80,6 +80,12 @@ public class BuildInfo {
       for (Entry<Object, Object> e : entries) {
         properties.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
       }
+
+      attributes = manifest.getAttributes("Selenium");
+      entries = attributes.entrySet();
+      for (Entry<Object, Object> e : entries) {
+        properties.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
+      }
     } catch (NullPointerException e) {
       // Fall through
     }
@@ -94,12 +100,12 @@ public class BuildInfo {
 
   /** @return The embedded build revision or "unknown". */
   public String getBuildRevision() {
-    return BUILD_PROPERTIES.getProperty("build-revision", "unknown");
+    return BUILD_PROPERTIES.getProperty("Build-Revision", "unknown");
   }
 
   /** @return The embedded build time or "unknown". */
   public String getBuildTime() {
-    return BUILD_PROPERTIES.getProperty("build-timestamp", "unknown");
+    return BUILD_PROPERTIES.getProperty("Build-Time", "unknown");
   }
 
   @Override

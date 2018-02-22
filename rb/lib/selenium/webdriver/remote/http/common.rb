@@ -1,5 +1,3 @@
-# encoding: utf-8
-#
 # Licensed to the Software Freedom Conservancy (SFC) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -51,10 +49,8 @@ module Selenium
               headers['Content-Type']   = "#{CONTENT_TYPE}; charset=utf-8"
               headers['Content-Length'] = payload.bytesize.to_s if [:post, :put].include?(verb)
 
-              if $DEBUG
-                puts "   >>> #{url} | #{payload}"
-                puts "     > #{headers.inspect}"
-              end
+              WebDriver.logger.info("   >>> #{url} | #{payload}")
+              WebDriver.logger.debug("     > #{headers.inspect}")
             elsif verb == :post
               payload = '{}'
               headers['Content-Length'] = '2'
@@ -78,7 +74,7 @@ module Selenium
             code = code.to_i
             body = body.to_s.strip
             content_type = content_type.to_s
-            puts "<- #{body}\n" if $DEBUG
+            WebDriver.logger.info("<- #{body}")
 
             if content_type.include? CONTENT_TYPE
               raise Error::WebDriverError, "empty body: #{content_type.inspect} (#{code})\n#{body}" if body.empty?

@@ -21,13 +21,17 @@ import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.DriverCommand;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Customized RemoteWebDriver that will communicate with a service that lives and dies with the
@@ -35,19 +39,26 @@ import java.net.URL;
  * with each instance (and that is too expensive for our purposes).
  */
 public class TestChromeDriver extends RemoteWebDriver {
+  private final static Logger LOG = Logger.getLogger(TestChromeDriver.class.getName());
+
   private static ChromeDriverService service;
 
   public TestChromeDriver() {
     super(chromeWithCustomCapabilities(null));
   }
 
-  public TestChromeDriver(Capabilities capabilities) {
+  public TestChromeDriver(Capabilities capabilities) throws IOException {
     super(getServiceUrl(), chromeWithCustomCapabilities(capabilities));
   }
 
-  private static URL getServiceUrl() {
+  private static URL getServiceUrl() throws IOException {
     if (service == null && !SauceDriver.shouldUseSauce()) {
-      service = ChromeDriverService.createDefaultService();
+      Path logFile = Files.createTempFile("chromedriver", ".log");
+      service = new ChromeDriverService.Builder()
+          .withVerbose(true)
+          .withLogFile(logFile.toFile())
+          .build();
+      LOG.info("chromedriver will log to " + logFile);
       try {
         service.start();
       } catch (IOException e) {
@@ -55,33 +66,28 @@ public class TestChromeDriver extends RemoteWebDriver {
       }
 
       // Fugly.
-      Runtime.getRuntime().addShutdownHook(new Thread() {
-        @Override
-        public void run() {
-          service.stop();
-        }
-      });
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> service.stop()));
     }
     return service.getUrl();
   }
 
-  private static DesiredCapabilities chromeWithCustomCapabilities(
-      Capabilities originalCapabilities) {
+  private static Capabilities chromeWithCustomCapabilities(Capabilities originalCapabilities) {
     ChromeOptions options = new ChromeOptions();
-    options.addArguments("disable-extensions");
+    options.addArguments("disable-extensions", "disable-infobars", "disable-breakpad");
+    Map<String, Object> prefs = new HashMap<>();
+    prefs.put("exit_type", "None");
+    prefs.put("exited_cleanly", true);
+    options.setExperimentalOption("prefs", prefs);
     String chromePath = System.getProperty("webdriver.chrome.binary");
     if (chromePath != null) {
       options.setBinary(new File(chromePath));
     }
 
-    DesiredCapabilities capabilities = DesiredCapabilities.chrome();
-    capabilities.setCapability(ChromeOptions.CAPABILITY, options);
-
     if (originalCapabilities != null) {
-      capabilities.merge(originalCapabilities);
+      options.merge(originalCapabilities);
     }
 
-    return capabilities;
+    return options;
   }
 
   public <X> X getScreenshotAs(OutputType<X> target) {

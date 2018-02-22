@@ -1,5 +1,3 @@
-# encoding: utf-8
-#
 # Licensed to the Software Freedom Conservancy (SFC) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -108,10 +106,8 @@ module Selenium
       #
       # class, readonly
       #
-      # @param [String]
-      #   attribute name
-      # @return [String,nil]
-      #   attribute value
+      # @param [String] name attribute name
+      # @return [String, nil] attribute value
       #
 
       def attribute(name)
@@ -122,10 +118,8 @@ module Selenium
       # Get the value of a the given property with the same name of the element. If the value is not
       # set, nil is returned.
       #
-      # @param [String]
-      #   property name
-      # @return [String,nil]
-      #   property value
+      # @param [String] name property name
+      # @return [String, nil] property value
       #
 
       def property(name)
@@ -145,7 +139,7 @@ module Selenium
       #
       # Send keystrokes to this element
       #
-      # @param [String, Symbol, Array]
+      # @param [String, Symbol, Array] args keystrokes to send
       #
       # Examples:
       #
@@ -240,6 +234,16 @@ module Selenium
       end
 
       #
+      # Get the dimensions and coordinates of this element.
+      #
+      # @return [WebDriver::Rectangle]
+      #
+
+      def rect
+        bridge.element_rect @id
+      end
+
+      #
       # Determine an element's location on the screen once it has been scrolled into view.
       #
       # @return [WebDriver::Point]
@@ -306,7 +310,12 @@ module Selenium
       #
 
       def as_json(*)
-        @id.is_a?(Hash) ? @id : {:ELEMENT => @id}
+        key = if bridge.dialect == :w3c
+                'element-6066-11e4-a52e-4f735466cecf'
+              else
+                'ELEMENT'
+              end
+        @id.is_a?(Hash) ? @id : {key => @id}
       end
 
       private

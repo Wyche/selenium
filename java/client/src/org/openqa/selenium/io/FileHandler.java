@@ -15,16 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 package org.openqa.selenium.io;
 
 import org.openqa.selenium.Platform;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;

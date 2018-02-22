@@ -19,6 +19,9 @@ package org.openqa.selenium.lift;
 
 import static org.openqa.selenium.lift.match.NumericalMatchers.atLeast;
 
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.StringDescription;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.lift.find.Finder;
@@ -30,12 +33,7 @@ import org.openqa.selenium.support.ui.SystemClock;
 import org.openqa.selenium.support.ui.Wait;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.StringDescription;
-
 import java.util.Collection;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Gives the context for a test, holds page state, and interacts with the {@link WebDriver}.
@@ -127,19 +125,10 @@ public class WebDriverTestContext implements TestContext {
   }
 
   public void waitFor(final Finder<WebElement, WebDriver> finder, final long timeoutMillis) {
-    final ExpectedCondition<Boolean> elementsDisplayedPredicate = new ExpectedCondition<Boolean>() {
-      public Boolean apply(WebDriver driver) {
-        final Collection<WebElement> elements = finder.findFrom(driver);
-        for (WebElement webElement : elements) {
-          if (webElement.isDisplayed()) {
-            return true;
-          }
-        }
-        return false;
-      }
-    };
+    final ExpectedCondition<Boolean> elementsDisplayedPredicate = driver ->
+        finder.findFrom(driver).stream().anyMatch(WebElement::isDisplayed);
 
-    final long defaultSleepTimeoutMillis = FluentWait.FIVE_HUNDRED_MILLIS.in(TimeUnit.MILLISECONDS);
+    final long defaultSleepTimeoutMillis = 500;
     final long sleepTimeout = (timeoutMillis > defaultSleepTimeoutMillis)
         ? defaultSleepTimeoutMillis : timeoutMillis / 2;
 

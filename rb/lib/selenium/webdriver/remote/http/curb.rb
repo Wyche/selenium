@@ -1,5 +1,3 @@
-# encoding: utf-8
-#
 # Licensed to the Software Freedom Conservancy (SFC) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -85,7 +83,7 @@ module Selenium
               c.max_redirects   = MAX_REDIRECTS
               c.follow_location = true
               c.timeout         = @timeout if @timeout
-              c.verbose         = $DEBUG
+              c.verbose         = WebDriver.logger.info?
 
               c
             )

@@ -1,5 +1,3 @@
-# encoding: utf-8
-#
 # Licensed to the Software Freedom Conservancy (SFC) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -90,7 +88,7 @@ module Selenium
           true
         rescue *NOT_CONNECTED_ERRORS
           sock.close if sock
-          $stderr.puts [@host, @port].inspect if $DEBUG
+          WebDriver.logger.debug("polling for socket on #{[@host, @port].inspect}")
           false
         end
       end

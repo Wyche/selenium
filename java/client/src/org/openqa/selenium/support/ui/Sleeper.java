@@ -25,16 +25,42 @@ import java.util.concurrent.TimeUnit;
 public interface Sleeper {
 
   public static final Sleeper SYSTEM_SLEEPER = new Sleeper() {
+
+    /**
+     * Sleeps for the specified duration of time.
+     *
+     * @deprecated use {@link #sleep(java.time.Duration)}
+     *
+     * @param duration How long to sleep.
+     * @throws InterruptedException If the thread is interrupted while sleeping.
+     */
+    @Deprecated
     public void sleep(Duration duration) throws InterruptedException {
       Thread.sleep(duration.in(TimeUnit.MILLISECONDS));
+    }
+
+    @Override
+    public void sleep(java.time.Duration duration) throws InterruptedException {
+      Thread.sleep(duration.toMillis());
     }
   };
 
   /**
    * Sleeps for the specified duration of time.
    *
+   * @deprecated use {@link #sleep(java.time.Duration)}
+   *
    * @param duration How long to sleep.
-   * @throws InterruptedException If hte thread is interrupted while sleeping.
+   * @throws InterruptedException If the thread is interrupted while sleeping.
    */
+  @Deprecated
   void sleep(Duration duration) throws InterruptedException;
+
+  /**
+   * Sleeps for the specified duration of time.
+   *
+   * @param duration How long to sleep.
+   * @throws InterruptedException If the thread is interrupted while sleeping.
+   */
+  void sleep(java.time.Duration duration) throws InterruptedException;
 }

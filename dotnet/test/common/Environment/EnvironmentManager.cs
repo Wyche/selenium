@@ -1,6 +1,8 @@
 using System;
 using System.Reflection;
 using System.IO;
+using Newtonsoft.Json;
+using NUnit.Framework;
 
 namespace OpenQA.Selenium.Environment
 {
@@ -12,25 +14,32 @@ namespace OpenQA.Selenium.Environment
         private IWebDriver driver;
         private UrlBuilder urlBuilder;
         private TestWebServer webServer;
-        RemoteSeleniumServer remoteServer;
+        private DriverFactory driverFactory;
+        private RemoteSeleniumServer remoteServer;
         private string remoteCapabilities;
 
         private EnvironmentManager()
         {
-            string configFile = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
-            // TODO(andre.nogueira): Error checking to guard against malformed config files
-            string driverClassName = GetSettingValue("Driver");
-            string assemblyName = GetSettingValue("Assembly");
-            Assembly assembly = Assembly.Load(assemblyName);
-            driverType = assembly.GetType(driverClassName);
-            browser = (Browser)Enum.Parse(typeof(Browser), GetSettingValue("DriverName"));
-            remoteCapabilities = GetSettingValue("RemoteCapabilities");
-
-            urlBuilder = new UrlBuilder();
-
             string currentDirectory = this.CurrentDirectory;
+            string content = File.ReadAllText(Path.Combine(currentDirectory, "appconfig.json"));
+            TestEnvironment env = JsonConvert.DeserializeObject<TestEnvironment>(content);
+
+            string activeDriverConfig = TestContext.Parameters.Get("ActiveDriverConfig", env.ActiveDriverConfig);
+            string activeWebsiteConfig = TestContext.Parameters.Get("ActiveWebsiteConfig", env.ActiveWebsiteConfig);
+            string driverServiceLocation = TestContext.Parameters.Get("DriverServiceLocation", env.DriverServiceLocation);
+            DriverConfig driverConfig = env.DriverConfigs[activeDriverConfig];
+            WebsiteConfig websiteConfig = env.WebSiteConfigs[activeWebsiteConfig];
+            this.driverFactory = new DriverFactory(driverServiceLocation);
+
+            Assembly driverAssembly = Assembly.Load(driverConfig.AssemblyName);
+            driverType = driverAssembly.GetType(driverConfig.DriverTypeName);
+            browser = driverConfig.BrowserValue;
+            remoteCapabilities = driverConfig.RemoteCapabilities;
+
+            urlBuilder = new UrlBuilder(websiteConfig);
+
             DirectoryInfo info = new DirectoryInfo(currentDirectory);
-            while (info != info.Root && string.Compare(info.Name, "build", StringComparison.OrdinalIgnoreCase) != 0)
+            while (info != info.Root && string.Compare(info.Name, "buck-out", StringComparison.OrdinalIgnoreCase) != 0 && string.Compare(info.Name, "build", StringComparison.OrdinalIgnoreCase) != 0)
             {
                 info = info.Parent;
             }
@@ -40,7 +49,7 @@ namespace OpenQA.Selenium.Environment
             bool autoStartRemoteServer = false;
             if (browser == Browser.Remote)
             {
-                autoStartRemoteServer = bool.Parse(GetSettingValue("AutoStartRemoteServer"));
+                autoStartRemoteServer = driverConfig.AutoStartRemoteServer;
             }
 
             remoteServer = new RemoteSeleniumServer(info.FullName, autoStartRemoteServer);
@@ -48,17 +57,18 @@ namespace OpenQA.Selenium.Environment
 
         ~EnvironmentManager()
         {
-            remoteServer.Stop();
-            webServer.Stop();
+            if (remoteServer != null)
+            {
+                remoteServer.Stop();
+            }
+            if (webServer != null)
+            {
+                webServer.Stop();
+            }
             if (driver != null)
             {
                 driver.Quit();
             }
-        }
-
-        public static string GetSettingValue(string key)
-        {
-            return System.Configuration.ConfigurationManager.AppSettings.GetValues(key)[0];
         }
 
         public Browser Browser 
@@ -66,23 +76,22 @@ namespace OpenQA.Selenium.Environment
             get { return browser; }
         }
 
+        public string DriverServiceDirectory
+        {
+            get { return this.driverFactory.DriverServicePath; }
+        }
+
         public string CurrentDirectory
         {
             get
             {
-                Assembly executingAssembly = Assembly.GetExecutingAssembly();
-                string assemblyLocation = executingAssembly.Location;
-
-                // If we're shadow copying,. fiddle with 
-                // the codebase instead 
-                if (AppDomain.CurrentDomain.ShadowCopyFiles)
+                string assemblyLocation = Path.GetDirectoryName(typeof(EnvironmentManager).Assembly.Location);
+                string testDirectory = TestContext.CurrentContext.TestDirectory;
+                if (assemblyLocation != testDirectory)
                 {
-                    Uri uri = new Uri(executingAssembly.CodeBase);
-                    assemblyLocation = uri.LocalPath;
+                    return assemblyLocation;
                 }
-
-                string currentDirectory = Path.GetDirectoryName(assemblyLocation);
-                return currentDirectory;
+                return testDirectory;
             }
         }
         
@@ -115,7 +124,7 @@ namespace OpenQA.Selenium.Environment
 
         public IWebDriver CreateDriverInstance()
         {
-            return (IWebDriver)Activator.CreateInstance(driverType);
+            return driverFactory.CreateDriver(driverType);
         }
 
         public IWebDriver CreateFreshDriver()

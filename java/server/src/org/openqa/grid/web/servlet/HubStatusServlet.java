@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 package org.openqa.grid.web.servlet;
 
+import com.google.common.io.CharStreams;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -25,9 +25,8 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
 import org.openqa.grid.common.exception.GridException;
-import org.openqa.grid.internal.Registry;
+import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.RemoteProxy;
-import org.openqa.grid.internal.TestSlot;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -67,7 +66,7 @@ public class HubStatusServlet extends RegistryBasedServlet {
     super(null);
   }
 
-  public HubStatusServlet(Registry registry) {
+  public HubStatusServlet(GridRegistry registry) {
     super(registry);
   }
 
@@ -77,7 +76,11 @@ public class HubStatusServlet extends RegistryBasedServlet {
     process(request, response);
   }
 
-
+  @Override
+  protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+      throws ServletException, IOException {
+    process(req, resp);
+  }
 
   protected void process(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
@@ -109,7 +112,7 @@ public class HubStatusServlet extends RegistryBasedServlet {
           keysToReturn = new Gson().fromJson(requestJSON.getAsJsonArray("configuration"), ArrayList.class);
         }
 
-        Registry registry = getRegistry();
+        GridRegistry registry = getRegistry();
         JsonElement config = registry.getConfiguration().toJson();
         for (Map.Entry<String, JsonElement> entry : config.getAsJsonObject().entrySet()) {
           if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains(entry.getKey())) {
@@ -148,17 +151,15 @@ public class HubStatusServlet extends RegistryBasedServlet {
   }
 
   private JsonObject getRequestJSON(HttpServletRequest request) throws IOException {
-    JsonObject requestJSON = null;
-    BufferedReader rd = new BufferedReader(new InputStreamReader(request.getInputStream()));
-    StringBuilder s = new StringBuilder();
-    String line;
-    while ((line = rd.readLine()) != null) {
-      s.append(line);
-    }
-    rd.close();
-    String json = s.toString();
-    if (!"".equals(json)) {
-      requestJSON = new JsonParser().parse(json).getAsJsonObject();
+    JsonObject requestJSON = new JsonObject();
+
+    try (BufferedReader rd = new BufferedReader(new InputStreamReader(request.getInputStream()))) {
+      StringBuilder s = new StringBuilder();
+      CharStreams.copy(rd, s);
+      String json = s.toString();
+      if (!"".equals(json)) {
+        requestJSON = new JsonParser().parse(json).getAsJsonObject();
+      }
     }
     return requestJSON;
   }

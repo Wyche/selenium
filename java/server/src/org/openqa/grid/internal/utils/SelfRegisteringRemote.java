@@ -17,6 +17,7 @@
 
 package org.openqa.grid.internal.utils;
 
+import com.google.common.io.CharStreams;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -33,6 +34,7 @@ import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.grid.shared.GridNodeServer;
 import org.openqa.grid.web.servlet.DisplayHelpServlet;
+import org.openqa.grid.web.servlet.NodeW3CStatusServlet;
 import org.openqa.grid.web.servlet.ResourceServlet;
 import org.openqa.grid.web.utils.ExtraServletUtil;
 import org.openqa.selenium.Platform;
@@ -43,6 +45,7 @@ import org.openqa.selenium.remote.server.log.LoggingManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.InvalidParameterException;
@@ -65,6 +68,10 @@ public class SelfRegisteringRemote {
 
   private boolean hasId;
 
+  public SelfRegisteringRemote(GridNodeConfiguration configuration) {
+    this(RegistrationRequest.build(configuration));
+  }
+
   public SelfRegisteringRemote(RegistrationRequest request) {
     this.registrationRequest = request;
     this.httpClientFactory = new HttpClientFactory();
@@ -72,20 +79,9 @@ public class SelfRegisteringRemote {
 
     registrationRequest.validate();
 
-    try {
-      GridHubConfiguration hubConfiguration = getHubConfiguration();
-      // the node can not set these values. They must come from the hub
-      if (hubConfiguration.timeout != null && hubConfiguration.timeout >= 0) {
-        registrationRequest.getConfiguration().timeout = hubConfiguration.timeout;
-      }
-      if (hubConfiguration.browserTimeout != null && hubConfiguration.browserTimeout >= 0) {
-        registrationRequest.getConfiguration().browserTimeout = hubConfiguration.browserTimeout;
-      }
-    } catch (Exception e) {
-      LOG.warning(
-        "error getting the parameters from the hub. The node may end up with wrong timeouts." + e
-          .getMessage());
-    }
+    // add the status servlet
+    nodeServlets.put("/status", NodeW3CStatusServlet.class);
+    nodeServlets.put("/wd/hub/status", NodeW3CStatusServlet.class);
 
     // add the resource servlet for nodes
     if (!registrationRequest.getConfiguration().isWithOutServlet(ResourceServlet.class)) {
@@ -120,12 +116,12 @@ public class SelfRegisteringRemote {
     this.server = server;
   }
 
-  public void startRemoteServer() throws Exception {
+  public boolean startRemoteServer() throws Exception {
     if (server == null) {
       throw new GridConfigurationException("no server set to register to the hub");
     }
     server.setExtraServlets(nodeServlets);
-    server.boot();
+    return server.boot();
   }
 
   public void stopRemoteServer() {
@@ -155,6 +151,7 @@ public class SelfRegisteringRemote {
     }
     cap.setCapability(RegistrationRequest.MAX_INSTANCES, instances);
     registrationRequest.getConfiguration().capabilities.add(cap);
+    registrationRequest.getConfiguration().fixUpCapabilities();
   }
 
   /**
@@ -272,6 +269,23 @@ public class SelfRegisteringRemote {
                                                 response.getStatusLine().getStatusCode(),
                                                 response.getStatusLine().getReasonPhrase()));
         }
+
+        try {
+          LOG.info("Updating the node configuration from the hub");
+          GridHubConfiguration hubConfiguration = getHubConfiguration();
+          // the node can not set these values. They must come from the hub
+          if (hubConfiguration.timeout != null && hubConfiguration.timeout >= 0) {
+            registrationRequest.getConfiguration().timeout = hubConfiguration.timeout;
+          }
+          if (hubConfiguration.browserTimeout != null && hubConfiguration.browserTimeout >= 0) {
+            registrationRequest.getConfiguration().browserTimeout = hubConfiguration.browserTimeout;
+          }
+        } catch (Exception e) {
+          LOG.warning(
+              "error getting the parameters from the hub. The node may end up with wrong timeouts." + e
+                  .getMessage());
+        }
+
         LOG.info("The node is registered to the hub and ready to use");
       } catch (Exception e) {
         throw new GridException("Error sending the registration request: " + e.getMessage());
@@ -370,14 +384,11 @@ public class SelfRegisteringRemote {
   }
 
   private static JsonObject extractObject(HttpResponse resp) throws IOException {
-    BufferedReader rd = new BufferedReader(new InputStreamReader(resp.getEntity().getContent()));
-    StringBuilder s = new StringBuilder();
-    String line;
-    while ((line = rd.readLine()) != null) {
-      s.append(line);
+    try (Reader rd = new BufferedReader(new InputStreamReader(resp.getEntity().getContent()))) {
+      StringBuilder s = new StringBuilder();
+      CharStreams.copy(rd, s);
+      return new JsonParser().parse(s.toString()).getAsJsonObject();
     }
-    rd.close();
-    return new JsonParser().parse(s.toString()).getAsJsonObject();
   }
 
 }

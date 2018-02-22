@@ -1,4 +1,4 @@
-﻿// <copyright file="CapabilityType.cs" company="WebDriver Committers">
+// <copyright file="CapabilityType.cs" company="WebDriver Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
 // or more contributor license agreements. See the NOTICE file
 // distributed with this work for additional information
@@ -27,6 +27,16 @@ namespace OpenQA.Selenium.Remote
         /// Capability name used for the browser name.
         /// </summary>
         public static readonly string BrowserName = "browserName";
+
+        /// <summary>
+        /// Capability name used for the browser version.
+        /// </summary>
+        public static readonly string BrowserVersion = "browserVersion";
+
+        /// <summary>
+        /// Capability name used for the platform name.
+        /// </summary>
+        public static readonly string PlatformName = "platformName";
 
         /// <summary>
         /// Capability name used for the browser platform.
@@ -74,6 +84,11 @@ namespace OpenQA.Selenium.Remote
         public static readonly string AcceptSslCertificates = "acceptSslCerts";
 
         /// <summary>
+        /// Capability name used to indicate whether the browser accepts SSL certificates on W3C Endpoints
+        /// </summary>
+        public static readonly string AcceptInsecureCertificates = "acceptInsecureCerts";
+
+        /// <summary>
         /// Capability name used to indicate whether the browser uses native events.
         /// </summary>
         public static readonly string HasNativeEvents = "nativeEvents";
@@ -82,6 +97,11 @@ namespace OpenQA.Selenium.Remote
         /// Capability name used to indicate how the browser handles unexpected alerts.
         /// </summary>
         public static readonly string UnexpectedAlertBehavior = "unexpectedAlertBehaviour";
+
+        /// <summary>
+        /// Capability name used to indicate how the browser handles unhandled user prompts.
+        /// </summary>
+        public static readonly string UnhandledPromptBehavior = "unhandledPromptBehavior";
 
         /// <summary>
         /// Capability name used to indicate the page load strategy for the browser.

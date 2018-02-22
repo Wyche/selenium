@@ -20,8 +20,8 @@ package org.openqa.grid.internal.utils.configuration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
@@ -53,7 +53,6 @@ public class GridConfigurationTest {
     assertEquals(GridConfiguration.DEFAULT_TIMEOUT, gc.timeout);
     assertEquals(GridConfiguration.DEFAULT_BROWSER_TIMEOUT, gc.browserTimeout);
     assertEquals(GridConfiguration.DEFAULT_DEBUG_TOGGLE, gc.debug);
-    assertFalse(gc.help);
     assertNull(gc.jettyMaxThreads);
     assertNull(gc.log);
     assertEquals("standalone", gc.role);

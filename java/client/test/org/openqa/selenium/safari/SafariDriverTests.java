@@ -19,12 +19,11 @@ package org.openqa.selenium.safari;
 
 import static org.junit.Assume.assumeTrue;
 
-import org.openqa.selenium.Platform;
-import org.openqa.selenium.StandardSeleniumTests;
-
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
+import org.openqa.selenium.Platform;
+import org.openqa.selenium.StandardSeleniumTests;
 import org.openqa.selenium.testing.TestUtilities;
 
 @RunWith(Suite.class)
@@ -33,8 +32,8 @@ import org.openqa.selenium.testing.TestUtilities;
     AlertsTest.class,
     CleanSessionTest.class,
     CrossDomainTest.class,
+    SafariOptionsTest.class,
     TechnologyPreviewTest.class,
-    WebSocketConnectionTest.class
 })
 public class SafariDriverTests {
 

@@ -17,8 +17,8 @@
 
 package org.openqa.grid.internal.listener;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,13 +30,15 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
+import org.apache.http.protocol.HttpContext;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.openqa.grid.common.RegistrationRequest;
+import org.openqa.grid.internal.DefaultGridRegistry;
 import org.openqa.grid.internal.DetachedRemoteProxy;
-import org.openqa.grid.internal.Registry;
+import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.internal.listeners.CommandListener;
 import org.openqa.grid.internal.mock.GridHelper;
@@ -67,7 +69,7 @@ public class CommandListenerTest {
 
   static class MyRemoteProxy extends DetachedRemoteProxy implements CommandListener {
 
-    public MyRemoteProxy(RegistrationRequest request, Registry registry) {
+    public MyRemoteProxy(RegistrationRequest request, GridRegistry registry) {
       super(request, registry);
     }
 
@@ -124,7 +126,10 @@ public class CommandListenerTest {
         // mocked objects
         when(stream.read(any(byte[].class))).thenAnswer(answer);
         when(entity.getContent()).thenReturn(stream);
-        when(client.execute(any(HttpHost.class), any(HttpRequest.class))).thenReturn(response);
+        when(client.execute(
+            any(HttpHost.class),
+            any(HttpRequest.class), any(
+            HttpContext.class))).thenReturn(response);
         when(factory.getGridHttpClient(anyInt(), anyInt())).thenReturn(client);
       } catch (Exception e) {
         e.printStackTrace();
@@ -147,7 +152,7 @@ public class CommandListenerTest {
 
   @Test
   public void canModifyResponseWithListener() throws IOException {
-    Registry registry = Registry.newInstance();
+    GridRegistry registry = DefaultGridRegistry.newInstance();
     registry.add(new MyRemoteProxy(req, registry));
 
     RequestHandler req = GridHelper.createNewSessionHandler(registry, app1);

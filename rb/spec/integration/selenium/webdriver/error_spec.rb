@@ -1,5 +1,3 @@
-# encoding: utf-8
-#
 # Licensed to the Software Freedom Conservancy (SFC) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -21,34 +19,29 @@ require_relative 'spec_helper'
 
 module Selenium
   module WebDriver
-    not_compliant_on driver: :remote, browser: :firefox do
-      describe Error do
-        it 'should raise an appropriate error' do
-          driver.navigate.to url_for('xhtmlTest.html')
+    describe Error do
+      it 'should raise an appropriate error' do
+        driver.navigate.to url_for('xhtmlTest.html')
 
-          expect do
-            driver.find_element(id: 'nonexistant')
-          end.to raise_error(WebDriver::Error::NoSuchElementError)
+        expect do
+          driver.find_element(id: 'nonexistant')
+        end.to raise_error(WebDriver::Error::NoSuchElementError)
+      end
+
+      it 'should show stack trace information', only: {browser: :ff_esr} do
+        driver.navigate.to url_for('xhtmlTest.html')
+
+        rescued = false
+        ex = nil
+
+        begin
+          driver.find_element(id: 'nonexistant')
+        rescue => ex
+          rescued = true
         end
 
-        compliant_on({browser: :ff_legacy},
-                     {driver: :remote, browser: :firefox}) do
-          it 'should show stack trace information' do
-            driver.navigate.to url_for('xhtmlTest.html')
-
-            rescued = false
-            ex = nil
-
-            begin
-              driver.find_element(id: 'nonexistant')
-            rescue => ex
-              rescued = true
-            end
-
-            expect(rescued).to be true
-            expect(ex.backtrace.first).to include('[remote server]')
-          end
-        end
+        expect(rescued).to be true
+        expect(ex.backtrace.first).to include('[remote server]')
       end
     end
   end # WebDriver

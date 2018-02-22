@@ -17,16 +17,21 @@
 
 package org.openqa.selenium.firefox;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.ByteStreams;
 
+//import org.apache.commons.io.output.NullOutputStream;
+import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.net.PortProber;
 import org.openqa.selenium.remote.service.DriverService;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 
@@ -66,9 +71,35 @@ public class GeckoDriverService extends DriverService {
     return new Builder().usingAnyFreePort().build();
   }
 
+  static GeckoDriverService createDefaultService(Capabilities caps) {
+    Builder builder = new Builder().usingAnyFreePort();
+
+    Object binary = caps.getCapability(FirefoxDriver.BINARY);
+    if (binary != null) {
+      FirefoxBinary actualBinary;
+      if (binary instanceof FirefoxBinary) {
+        actualBinary = (FirefoxBinary) binary;
+      } else if (binary instanceof String) {
+        actualBinary = new FirefoxBinary(new File(String.valueOf(binary)));
+      } else {
+        throw new IllegalArgumentException(
+            "Expected binary to be a string or a binary: " + binary);
+      }
+
+      builder.usingFirefoxBinary(actualBinary);
+    }
+
+    return new Builder().build();
+  }
+
   @Override
   protected void waitUntilAvailable() throws MalformedURLException {
     PortProber.waitForPortUp(getUrl().getPort(), 20, SECONDS);
+  }
+
+  @Override
+  protected boolean hasShutdownEndpoint() {
+    return false;
   }
 
   /**
@@ -77,16 +108,32 @@ public class GeckoDriverService extends DriverService {
   public static class Builder extends DriverService.Builder<
     GeckoDriverService, GeckoDriverService.Builder> {
 
-    private FirefoxBinary binary;
+    private FirefoxBinary firefoxBinary;
+
     public Builder() {
-      this(new FirefoxBinary());
     }
 
     /**
      * @param binary - A custom location where the Firefox binary is available.
+     *
+     * @deprecated Use method usingFirefoxBinary instead
      */
+    @Deprecated
     public Builder(FirefoxBinary binary) {
-      this.binary = binary;
+      this.firefoxBinary = binary;
+    }
+
+    /**
+     * Sets which browser executable the builder will use.
+     *
+     * @param firefoxBinary The browser executable to use.
+     * @return A self reference.
+     */
+    public Builder usingFirefoxBinary(FirefoxBinary firefoxBinary) {
+      checkNotNull(firefoxBinary);
+      checkExecutable(firefoxBinary.getFile());
+      this.firefoxBinary = firefoxBinary;
+      return this;
     }
 
     @Override
@@ -101,25 +148,40 @@ public class GeckoDriverService extends DriverService {
     protected ImmutableList<String> createArgs() {
       ImmutableList.Builder<String> argsBuilder = ImmutableList.builder();
       argsBuilder.add(String.format("--port=%d", getPort()));
-      if (getLogFile() != null) {
-        argsBuilder.add(String.format("--log-file=\"%s\"", getLogFile().getAbsolutePath()));
-      }
-      try {
+      if (firefoxBinary != null) {
         argsBuilder.add("-b");
-        argsBuilder.add(binary.getPath());
-      } catch (WebDriverException e) {
-        // Unable to find Firefox. GeckoDriver will be responsible for finding
-        // Firefox on the PATH or via a capability.
-      }
+        argsBuilder.add(firefoxBinary.getPath());
+      } // else GeckoDriver will be responsible for finding Firefox on the PATH or via a capability.
       return argsBuilder.build();
     }
 
     @Override
     protected GeckoDriverService createDriverService(File exe, int port,
-                                                                ImmutableList<String> args,
-                                                                ImmutableMap<String, String> environment) {
+                                                     ImmutableList<String> args,
+                                                     ImmutableMap<String, String> environment) {
       try {
-        return new GeckoDriverService(exe, port, args, environment);
+        GeckoDriverService service = new GeckoDriverService(exe, port, args, environment);
+        String firefoxLogFile = System.getProperty(FirefoxDriver.SystemProperty.BROWSER_LOGFILE);
+        if (firefoxLogFile != null) { // System property has higher precedence
+          if ("/dev/stdout".equals(firefoxLogFile)) {
+            service.sendOutputTo(System.out);
+          } else if ("/dev/stderr".equals(firefoxLogFile)) {
+            service.sendOutputTo(System.err);
+          } else if ("/dev/null".equals(firefoxLogFile)) {
+            service.sendOutputTo(ByteStreams.nullOutputStream());
+          } else {
+            // TODO: The stream is leaked.
+            service.sendOutputTo(new FileOutputStream(firefoxLogFile));
+          }
+        } else {
+          if (getLogFile() != null) {
+            // TODO: This stream is leaked.
+            service.sendOutputTo(new FileOutputStream(getLogFile()));
+          } else {
+            service.sendOutputTo(System.err);
+          }
+        }
+        return service;
       } catch (IOException e) {
         throw new WebDriverException(e);
       }

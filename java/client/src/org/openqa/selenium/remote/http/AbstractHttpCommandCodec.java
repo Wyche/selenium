@@ -17,21 +17,20 @@
 
 package org.openqa.selenium.remote.http;
 
-import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.net.HttpHeaders.CACHE_CONTROL;
 import static com.google.common.net.HttpHeaders.CONTENT_LENGTH;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static com.google.common.net.MediaType.JSON_UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.openqa.selenium.json.Json.MAP_TYPE;
 import static org.openqa.selenium.remote.DriverCommand.ADD_COOKIE;
 import static org.openqa.selenium.remote.DriverCommand.CLEAR_ELEMENT;
-import static org.openqa.selenium.remote.DriverCommand.CLICK;
 import static org.openqa.selenium.remote.DriverCommand.CLICK_ELEMENT;
 import static org.openqa.selenium.remote.DriverCommand.CLOSE;
 import static org.openqa.selenium.remote.DriverCommand.DELETE_ALL_COOKIES;
 import static org.openqa.selenium.remote.DriverCommand.DELETE_COOKIE;
-import static org.openqa.selenium.remote.DriverCommand.DOUBLE_CLICK;
 import static org.openqa.selenium.remote.DriverCommand.ELEMENT_EQUALS;
 import static org.openqa.selenium.remote.DriverCommand.ELEMENT_SCREENSHOT;
 import static org.openqa.selenium.remote.DriverCommand.FIND_CHILD_ELEMENT;
@@ -74,14 +73,10 @@ import static org.openqa.selenium.remote.DriverCommand.IMPLICITLY_WAIT;
 import static org.openqa.selenium.remote.DriverCommand.IS_BROWSER_ONLINE;
 import static org.openqa.selenium.remote.DriverCommand.IS_ELEMENT_ENABLED;
 import static org.openqa.selenium.remote.DriverCommand.IS_ELEMENT_SELECTED;
-import static org.openqa.selenium.remote.DriverCommand.MOUSE_DOWN;
-import static org.openqa.selenium.remote.DriverCommand.MOUSE_UP;
-import static org.openqa.selenium.remote.DriverCommand.MOVE_TO;
 import static org.openqa.selenium.remote.DriverCommand.NEW_SESSION;
 import static org.openqa.selenium.remote.DriverCommand.QUIT;
 import static org.openqa.selenium.remote.DriverCommand.REFRESH;
 import static org.openqa.selenium.remote.DriverCommand.SCREENSHOT;
-import static org.openqa.selenium.remote.DriverCommand.SEND_KEYS_TO_ACTIVE_ELEMENT;
 import static org.openqa.selenium.remote.DriverCommand.SEND_KEYS_TO_ELEMENT;
 import static org.openqa.selenium.remote.DriverCommand.SET_ALERT_CREDENTIALS;
 import static org.openqa.selenium.remote.DriverCommand.SET_BROWSER_ONLINE;
@@ -96,35 +91,24 @@ import static org.openqa.selenium.remote.DriverCommand.SWITCH_TO_CONTEXT;
 import static org.openqa.selenium.remote.DriverCommand.SWITCH_TO_FRAME;
 import static org.openqa.selenium.remote.DriverCommand.SWITCH_TO_PARENT_FRAME;
 import static org.openqa.selenium.remote.DriverCommand.SWITCH_TO_WINDOW;
-import static org.openqa.selenium.remote.DriverCommand.TOUCH_DOUBLE_TAP;
-import static org.openqa.selenium.remote.DriverCommand.TOUCH_DOWN;
-import static org.openqa.selenium.remote.DriverCommand.TOUCH_FLICK;
-import static org.openqa.selenium.remote.DriverCommand.TOUCH_LONG_PRESS;
-import static org.openqa.selenium.remote.DriverCommand.TOUCH_MOVE;
-import static org.openqa.selenium.remote.DriverCommand.TOUCH_SCROLL;
-import static org.openqa.selenium.remote.DriverCommand.TOUCH_SINGLE_TAP;
-import static org.openqa.selenium.remote.DriverCommand.TOUCH_UP;
 import static org.openqa.selenium.remote.DriverCommand.UPLOAD_FILE;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
 import org.openqa.selenium.UnsupportedCommandException;
+import org.openqa.selenium.json.Json;
 import org.openqa.selenium.net.Urls;
-import org.openqa.selenium.remote.BeanToJsonConverter;
 import org.openqa.selenium.remote.Command;
 import org.openqa.selenium.remote.CommandCodec;
-import org.openqa.selenium.remote.JsonToBeanConverter;
 import org.openqa.selenium.remote.SessionId;
 
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A command codec that adheres to the W3C's WebDriver wire protocol.
@@ -135,10 +119,9 @@ public abstract class AbstractHttpCommandCodec implements CommandCodec<HttpReque
   private static final Splitter PATH_SPLITTER = Splitter.on('/').omitEmptyStrings();
   private static final String SESSION_ID_PARAM = "sessionId";
 
-  private final ConcurrentHashMap<String, CommandSpec> nameToSpec = new ConcurrentHashMap();
+  private final ConcurrentHashMap<String, CommandSpec> nameToSpec = new ConcurrentHashMap<>();
   private final Map<String, String> aliases = new HashMap<>();
-  private final BeanToJsonConverter beanToJsonConverter = new BeanToJsonConverter();
-  private final JsonToBeanConverter jsonToBeanConverter = new JsonToBeanConverter();
+  private final Json json = new Json();
 
   public AbstractHttpCommandCodec() {
     defineCommand(STATUS, get("/status"));
@@ -170,7 +153,7 @@ public abstract class AbstractHttpCommandCodec implements CommandCodec<HttpReque
 
     defineCommand(UPLOAD_FILE, post("/session/:sessionId/file"));
     defineCommand(SCREENSHOT, get("/session/:sessionId/screenshot"));
-    defineCommand(ELEMENT_SCREENSHOT, get("/session/:sessionId/screenshot/:id"));
+    defineCommand(ELEMENT_SCREENSHOT, get("/session/:sessionId/element/:id/screenshot"));
     defineCommand(GET_TITLE, get("/session/:sessionId/title"));
 
     defineCommand(FIND_ELEMENT, post("/session/:sessionId/element"));
@@ -214,22 +197,6 @@ public abstract class AbstractHttpCommandCodec implements CommandCodec<HttpReque
     defineCommand(GET_SCREEN_ROTATION, get("/session/:sessionId/rotation"));
     defineCommand(SET_SCREEN_ROTATION, post("/session/:sessionId/rotation"));
 
-    // Interactions-related commands.
-    defineCommand(MOUSE_DOWN, post("/session/:sessionId/buttondown"));
-    defineCommand(MOUSE_UP, post("/session/:sessionId/buttonup"));
-    defineCommand(CLICK, post("/session/:sessionId/click"));
-    defineCommand(DOUBLE_CLICK, post("/session/:sessionId/doubleclick"));
-    defineCommand(MOVE_TO, post("/session/:sessionId/moveto"));
-    defineCommand(SEND_KEYS_TO_ACTIVE_ELEMENT, post("/session/:sessionId/keys"));
-    defineCommand(TOUCH_SINGLE_TAP, post("/session/:sessionId/touch/click"));
-    defineCommand(TOUCH_DOUBLE_TAP, post("/session/:sessionId/touch/doubleclick"));
-    defineCommand(TOUCH_DOWN, post("/session/:sessionId/touch/down"));
-    defineCommand(TOUCH_FLICK, post("/session/:sessionId/touch/flick"));
-    defineCommand(TOUCH_LONG_PRESS, post("/session/:sessionId/touch/longclick"));
-    defineCommand(TOUCH_MOVE, post("/session/:sessionId/touch/move"));
-    defineCommand(TOUCH_SCROLL, post("/session/:sessionId/touch/scroll"));
-    defineCommand(TOUCH_UP, post("/session/:sessionId/touch/up"));
-
     defineCommand(IME_GET_AVAILABLE_ENGINES, get("/session/:sessionId/ime/available_engines"));
     defineCommand(IME_GET_ACTIVE_ENGINE, get("/session/:sessionId/ime/active_engine"));
     defineCommand(IME_IS_ACTIVATED, get("/session/:sessionId/ime/activated"));
@@ -258,7 +225,7 @@ public abstract class AbstractHttpCommandCodec implements CommandCodec<HttpReque
 
     if (HttpMethod.POST == spec.method) {
 
-      String content = beanToJsonConverter.convert(parameters);
+      String content = json.toJson(parameters);
       byte[] data = content.getBytes(UTF_8);
 
       request.setHeader(CONTENT_LENGTH, String.valueOf(data.length));
@@ -300,7 +267,7 @@ public abstract class AbstractHttpCommandCodec implements CommandCodec<HttpReque
     String content = encodedCommand.getContentString();
     if (!content.isEmpty()) {
       @SuppressWarnings("unchecked")
-      HashMap<String, ?> tmp = jsonToBeanConverter.convert(HashMap.class, content);
+      Map<String, Object> tmp = json.toType(content, MAP_TYPE);
       parameters.putAll(tmp);
     }
 
